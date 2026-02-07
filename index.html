@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三江源动物性格测试 - 寻找你的高原图腾</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 页面容器 -->
+    <div class="container">
+        
+        <!-- 首页 -->
+        <section id="home" class="page active">
+            <div class="hero">
+                <div class="hero-bg"></div>
+                <div class="hero-content">
+                    <div class="logo">
+                        <span class="logo-icon">🏔️</span>
+                        <span class="logo-text">三江源</span>
+                    </div>
+                    <h1>动物性格测试</h1>
+                    <p class="tagline">寻找你的高原图腾</p>
+                    <p class="description">
+                        基于大五人格理论 & 高原生态智慧<br>
+                        探索你内心深处的野性原型
+                    </p>
+                    <div class="features">
+                        <div class="feature">
+                            <span class="feature-icon">🔬</span>
+                            <span>科学测评</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">🐺</span>
+                            <span>5种高原动物</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">📊</span>
+                            <span>人格雷达图</span>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="startTest()">
+                        开始测试
+                        <span class="btn-arrow">→</span>
+                    </button>
+                    <p class="disclaimer">本测试仅供娱乐，非临床诊断工具</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 测试页面 -->
+        <section id="test" class="page">
+            <div class="test-header">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">1 / 36</span>
+                </div>
+            </div>
+            
+            <div class="question-container">
+                <div class="question-card" id="questionCard">
+                    <h2 class="question-text" id="questionText"></h2>
+                    <div class="options" id="options">
+                        <!-- 选项将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="navigation">
+                <button class="btn-secondary" id="prevBtn" onclick="prevQuestion()">
+                    ← 上一题
+                </button>
+                <button class="btn-secondary" id="nextBtn" onclick="nextQuestion()" disabled>
+                    下一题 →
+                </button>
+            </div>
+        </section>
+
+        <!-- 结果页面 -->
+        <section id="result" class="page">
+            <div class="result-container">
+                <div class="result-header">
+                    <h2>你的高原图腾</h2>
+                </div>
+                
+                <div class="result-card">
+                    <div class="animal-avatar" id="animalAvatar"></div>
+                    <h3 class="animal-name" id="animalName"></h3>
+                    <p class="animal-tagline" id="animalTagline"></p>
+                    
+                    <div class="traits-container">
+                        <h4>核心特质</h4>
+                        <div class="traits" id="traits">
+                            <!-- 特质标签将通过JS动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <div class="radar-chart-container">
+                        <h4>人格雷达图</h4>
+                        <canvas id="radarChart" width="280" height="280"></canvas>
+                        <div class="radar-labels">
+                            <span>开放性</span>
+                            <span>责任感</span>
+                            <span>外向性</span>
+                            <span>宜人性</span>
+                            <span>神经质</span>
+                        </div>
+                    </div>
+                    
+                    <div class="description-container">
+                        <h4>性格解读</h4>
+                        <p class="description-text" id="resultDescription"></p>
+                    </div>
+                    
+                    <div class="match-container">
+                        <h4>最佳匹配</h4>
+                        <p class="match-text" id="matchText"></p>
+                    </div>
+                    
+                    <div class="tips-container">
+                        <h4>发展建议</h4>
+                        <p class="tips-text" id="tipsText"></p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn-primary" onclick="shareResult()">
+                            🔗 分享结果
+                        </button>
+                        <button class="btn-secondary" onclick="restartTest()">
+                            🔄 重新测试
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="wildlife-notice">
+                    <p>🦌 守护高原，从了解开始</p>
+                    <p>每份测试我们将捐赠 1 元用于三江源野生动物保护</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

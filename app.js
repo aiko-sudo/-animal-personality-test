@@ -540,7 +540,7 @@ function renderQuestion() {
     // 更新进度
     const progress = ((currentQuestion + 1) / questions.length) * 100;
     progressFill.style.width = `${progress}%`;
-    progressText.textContent = `${currentQuestion + 1} / ${questions.length}`;
+    progressText.textContent = `第 ${currentQuestion + 1} 题 / 共 ${questions.length} 题`;
     
     // 更新题目
     questionText.textContent = question.text;

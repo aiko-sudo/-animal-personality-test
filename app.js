@@ -4,6 +4,101 @@
  */
 
 // ========================================
+// 触摸优化 - 触觉反馈 - 性能优化
+// ========================================
+
+function triggerHapticFeedback(type = 'light') {
+    if (!navigator.vibrate) return;
+
+    const patterns = {
+        light: 10,
+        medium: 20,
+        heavy: 30,
+        success: [10, 30, 10],
+        error: [50, 30, 50]
+    };
+
+    const pattern = patterns[type] || patterns.light;
+    navigator.vibrate(pattern);
+}
+
+function setTouchState(element, isTouching) {
+    if (!element) return;
+
+    if (isTouching) {
+        element.classList.add('touching');
+    } else {
+        element.classList.remove('touching');
+    }
+}
+
+// 性能优化：使用事件委托替代多个单独监听器
+function addTouchListeners(selector) {
+    document.querySelectorAll(selector).forEach(element => {
+        element.addEventListener('touchstart', (e) => {
+            setTouchState(e.currentTarget, true);
+            triggerHapticFeedback('light');
+        }, { passive: true });
+
+        element.addEventListener('touchend', (e) => {
+            setTouchState(e.currentTarget, false);
+        }, { passive: true });
+
+        element.addEventListener('touchcancel', (e) => {
+            setTouchState(e.currentTarget, false);
+        }, { passive: true });
+
+        element.addEventListener('mousedown', (e) => {
+            setTouchState(e.currentTarget, true);
+        });
+
+        element.addEventListener('mouseup', (e) => {
+            setTouchState(e.currentTarget, false);
+        });
+
+        element.addEventListener('mouseleave', (e) => {
+            setTouchState(e.currentTarget, false);
+        });
+    });
+}
+
+// 性能优化：事件委托用于选项点击（单个监听器替代多个）
+function setupOptionDelegation() {
+    optionsContainer.addEventListener('click', (e) => {
+        const optionEl = e.target.closest('.option');
+        if (optionEl && optionsContainer.contains(optionEl)) {
+            const index = parseInt(optionEl.dataset.index);
+            if (!isNaN(index)) {
+                selectOption(index);
+            }
+        }
+    });
+
+    // 性能优化：事件委托用于触摸状态
+    optionsContainer.addEventListener('touchstart', (e) => {
+        const optionEl = e.target.closest('.option');
+        if (optionEl && optionsContainer.contains(optionEl)) {
+            setTouchState(optionEl, true);
+            triggerHapticFeedback('light');
+        }
+    }, { passive: true });
+
+    optionsContainer.addEventListener('touchend', (e) => {
+        const optionEl = e.target.closest('.option');
+        if (optionEl && optionsContainer.contains(optionEl)) {
+            setTouchState(optionEl, false);
+        }
+    }, { passive: true });
+
+    optionsContainer.addEventListener('touchcancel', (e) => {
+        const optionEl = e.target.closest('.option');
+        if (optionEl && optionsContainer.contains(optionEl)) {
+            setTouchState(optionEl, false);
+        }
+    }, { passive: true });
+}
+
+// ========================================
 // 题目数据 - 36题完整题库
 // ========================================
 
@@ -330,7 +425,7 @@ const questions = [
         text: '我有时会感到孤独或失落',
         options: [
             { text: '完全不符合', score: 5 },
-            { text: '不太符蚈', score: 4 },
+            { text: '不太符合', score: 4 }
             { text: '一般', score: 3 },
             { text: '比较符合', score: 2 },
             { text: '完全符合', score: 1 }
@@ -522,6 +617,10 @@ function startTest() {
         agreeableness: 0,
         neuroticism: 0
     };
+    // 性能优化：清除缓存
+    cachedAnimalKey = null;
+    cachedAnimal = null;
+    cachedCanvasSetup = null;
     showPage('test');
     renderQuestion();
 }
@@ -531,41 +630,43 @@ function restartTest() {
 }
 
 // ========================================
-// 题目渲染函数
+// 题目渲染函数 - 性能优化
 // ========================================
 
 function renderQuestion() {
     const question = questions[currentQuestion];
-    
-    // 更新进度
+
+    // 性能优化：批量更新进度条和文本（减少回流）
     const progress = ((currentQuestion + 1) / questions.length) * 100;
     progressFill.style.width = `${progress}%`;
     progressText.textContent = `第 ${currentQuestion + 1} 题 / 共 ${questions.length} 题`;
-    
-    // 更新题目
+
     questionText.textContent = question.text;
-    
-    // 渲染选项
+
+    // 性能优化：使用 DocumentFragment 批量添加选项（减少回流）
+    // 性能优化：移除单独的事件监听器，使用事件委托
     optionsContainer.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+
     question.options.forEach((option, index) => {
         const optionEl = document.createElement('div');
         optionEl.className = 'option';
         optionEl.textContent = option.text;
         optionEl.dataset.index = index;
         optionEl.dataset.score = option.score;
-        
-        // 如果已有答案，显示选中状态
+
         if (answers[currentQuestion] !== undefined) {
             if (answers[currentQuestion] === index) {
                 optionEl.classList.add('selected');
             }
         }
-        
-        optionEl.addEventListener('click', () => selectOption(index));
-        optionsContainer.appendChild(optionEl);
+
+        fragment.appendChild(optionEl);
     });
-    
-    // 更新按钮状态
+
+    optionsContainer.appendChild(fragment);
+
     prevBtn.disabled = currentQuestion === 0;
     nextBtn.textContent = currentQuestion === questions.length - 1 ? '查看结果 →' : '下一题 →';
     nextBtn.disabled = answers[currentQuestion] === undefined;
@@ -573,8 +674,8 @@ function renderQuestion() {
 
 function selectOption(index) {
     answers[currentQuestion] = index;
-    
-    // 更新选项样式
+    triggerHapticFeedback('medium');
+
     document.querySelectorAll('.option').forEach((option, i) => {
         if (i === index) {
             option.classList.add('selected');
@@ -582,7 +683,7 @@ function selectOption(index) {
             option.classList.remove('selected');
         }
     });
-    
+
     nextBtn.disabled = false;
 }
 
@@ -604,14 +705,14 @@ function prevQuestion() {
 }
 
 // ========================================
-// 结果计算函数
+// 结果计算函数 - 性能优化
 // ========================================
 
 function calculateResults() {
     // 初始化结果
     const dimensions = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'];
     dimensions.forEach(dim => results[dim] = 0);
-    
+
     const dimensionCounts = {
         openness: 0,
         conscientiousness: 0,
@@ -619,68 +720,97 @@ function calculateResults() {
         agreeableness: 0,
         neuroticism: 0
     };
-    
-    // 计算各维度总分
-    answers.forEach((answerIndex, questionIndex) => {
-        const question = questions[questionIndex];
-        const score = question.options[answerIndex].score;
-        
-        results[question.dimension] += score;
-        dimensionCounts[question.dimension]++;
-    });
-    
-    // 计算平均值并归一化到 1-10 分制
-    dimensions.forEach(dim => {
+
+    // 性能优化：减少重复属性访问
+    for (let i = 0; i < answers.length; i++) {
+        const question = questions[i];
+        const dimension = question.dimension;
+        const score = question.options[answers[i]].score;
+
+        results[dimension] += score;
+        dimensionCounts[dimension]++;
+    }
+
+    // 性能优化：计算平均值并归一化到 1-10 分制（减少循环）
+    for (let i = 0; i < dimensions.length; i++) {
+        const dim = dimensions[i];
         results[dim] = Math.round((results[dim] / dimensionCounts[dim]) * 2) / 2;
-    });
-    
+    }
+
     // 计算神经质反转分数（用于雷达图显示）
     results.neuroticismReversed = 10 - results.neuroticism;
 }
 
 // ========================================
-// 结果展示函数
+// 结果展示函数 - 性能优化
 // ========================================
+
+// 性能优化：Memoization 缓存动物判定结果
+let cachedAnimalKey = null;
+let cachedAnimal = null;
 
 function showResult() {
     showPage('result');
-    
-    // 确定动物类型
+
+    // 确定动物类型（使用缓存）
     const animal = determineAnimal();
-    
-    // 渲染结果
-    document.getElementById('animalAvatar').textContent = animal.emoji;
-    document.getElementById('animalAvatar').className = `animal-avatar ${animal.colorClass}`;
-    document.getElementById('animalName').textContent = animal.name;
-    document.getElementById('animalTagline').textContent = animal.tagline;
-    document.getElementById('resultDescription').textContent = animal.description;
-    document.getElementById('matchText').textContent = `最佳伙伴：${animal.match}`;
-    document.getElementById('tipsText').textContent = animal.tips;
-    
-    // 渲染特质标签
-    const traitsContainer = document.getElementById('traits');
-    traitsContainer.innerHTML = '';
-    animal.traits.forEach(trait => {
-        const traitEl = document.createElement('span');
-        traitEl.className = 'trait-tag';
-        traitEl.textContent = trait;
-        traitsContainer.appendChild(traitEl);
+
+    // 性能优化：使用 requestAnimationFrame 批量更新 DOM（减少回流）
+    requestAnimationFrame(() => {
+        // 批量更新文本内容（先读取所有元素，再批量写入）
+        const avatarEl = document.getElementById('animalAvatar');
+        avatarEl.textContent = animal.emoji;
+        avatarEl.className = `animal-avatar ${animal.colorClass}`;
+
+        document.getElementById('animalName').textContent = animal.name;
+        document.getElementById('animalTagline').textContent = animal.tagline;
+        document.getElementById('resultDescription').textContent = animal.description;
+        document.getElementById('matchText').textContent = `最佳伙伴：${animal.match}`;
+        document.getElementById('tipsText').textContent = animal.tips;
+
+        // 性能优化：使用 DocumentFragment 批量添加特质标签
+        const traitsContainer = document.getElementById('traits');
+        const fragment = document.createDocumentFragment();
+
+        animal.traits.forEach(trait => {
+            const traitEl = document.createElement('span');
+            traitEl.className = 'trait-tag';
+            traitEl.textContent = trait;
+            fragment.appendChild(traitEl);
+        });
+
+        traitsContainer.innerHTML = '';
+        traitsContainer.appendChild(fragment);
+
+        // 绘制雷达图
+        drawRadarChart();
     });
-    
-    // 绘制雷达图
-    drawRadarChart();
 }
 
 function determineAnimal() {
+    // 性能优化：使用 Memoization 避免重复计算
     const { openness, conscientiousness, extraversion, agreeableness, neuroticism } = results;
-    
+    const cacheKey = `${openness},${conscientiousness},${extraversion},${agreeableness},${neuroticism}`;
+
+    if (cachedAnimalKey === cacheKey && cachedAnimal) {
+        return cachedAnimal;
+    }
+
     // 评分规则（简化版）
     // 雪豹：高开放性 + 低外向性 + 高神经质反转 = 策略型
     // 棕头鸥：高外向性 + 高宜人性 = 社交型
     // 牦牛：高责任感 + 高宜人性 = 稳定型
     // 高山兀鹫：低外向性 + 高责任感 = 分析型
     // 赤狐：高开放性 + 低神经质 = 适应型
-    
+
+    // 性能优化：预计算常用值
+    const opennessNorm = openness / 10;
+    const conscientiousnessNorm = conscientiousness / 10;
+    const extraversionNorm = extraversion / 10;
+    const agreeablenessNorm = agreeableness / 10;
+    const neuroticismReversedNorm = (10 - neuroticism) / 10;
+    const lowExtraversionNorm = 1 - extraversionNorm;
+
     let scores = {
         wolf: 0,
         gull: 0,
@@ -688,137 +818,200 @@ function determineAnimal() {
         vulture: 0,
         fox: 0
     };
-    
+
     // 雪豹计算
-    scores.wolf += (openness / 10) * 3;      // 高开放性
-    scores.wolf += ((10 - extraversion) / 10) * 2;  // 低外向性
-    scores.wolf += ((10 - neuroticism) / 10) * 2;  // 高情绪稳定性
-    scores.wolf += (conscientiousness / 10) * 3;  // 高责任感
-    
+    scores.wolf += opennessNorm * 3;
+    scores.wolf += lowExtraversionNorm * 2;
+    scores.wolf += neuroticismReversedNorm * 2;
+    scores.wolf += conscientiousnessNorm * 3;
+
     // 棕头鸥计算
-    scores.gull += (extraversion / 10) * 4;   // 高外向性
-    scores.gull += (agreeableness / 10) * 3;  // 高宜人性
-    scores.gull += (openness / 10) * 2;       // 一定开放性
-    scores.gull += (conscientiousness / 10) * 1; // 一定责任感
-    
+    scores.gull += extraversionNorm * 4;
+    scores.gull += agreeablenessNorm * 3;
+    scores.gull += opennessNorm * 2;
+    scores.gull += conscientiousnessNorm * 1;
+
     // 牦牛计算
-    scores.yak += (conscientiousness / 10) * 4;  // 高责任感
-    scores.yak += (agreeableness / 10) * 3;     // 高宜人性
-    scores.yak += ((10 - neuroticism) / 10) * 2; // 高情绪稳定性
-    scores.yak += (extraversion / 10) * 1;      // 一定外向性
-    
+    scores.yak += conscientiousnessNorm * 4;
+    scores.yak += agreeablenessNorm * 3;
+    scores.yak += neuroticismReversedNorm * 2;
+    scores.yak += extraversionNorm * 1;
+
     // 高山兀鹫计算
-    scores.vulture += (conscientiousness / 10) * 4; // 高责任感
-    scores.vulture += ((10 - extraversion) / 10) * 3; // 低外向性
-    scores.vulture += (openness / 10) * 2;          // 一定开放性
-    scores.vulture += (agreeableness / 10) * 1;     // 一定宜人性
-    
+    scores.vulture += conscientiousnessNorm * 4;
+    scores.vulture += lowExtraversionNorm * 3;
+    scores.vulture += opennessNorm * 2;
+    scores.vulture += agreeablenessNorm * 1;
+
     // 赤狐计算
-    scores.fox += (openness / 10) * 3;         // 高开放性
-    scores.fox += ((10 - neuroticism) / 10) * 3; // 高情绪稳定性
-    scores.fox += (conscientiousness / 10) * 2; // 一定责任感
-    scores.fox += (extraversion / 10) * 2;      // 一定外向性
-    
-    // 找出最高分
+    scores.fox += opennessNorm * 3;
+    scores.fox += neuroticismReversedNorm * 3;
+    scores.fox += conscientiousnessNorm * 2;
+    scores.fox += extraversionNorm * 2;
+
+    // 找出最高分（性能优化：使用 for 循环替代 forEach）
     let maxScore = 0;
     let result = animals.fox;
-    
-    Object.keys(scores).forEach(key => {
+    const keys = Object.keys(scores);
+
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
         if (scores[key] > maxScore) {
             maxScore = scores[key];
             result = animals[key];
         }
-    });
-    
+    }
+
+    // 缓存结果
+    cachedAnimalKey = cacheKey;
+    cachedAnimal = result;
+
     return result;
 }
 
 // ========================================
-// 雷达图绘制函数
+// 雷达图绘制函数 - 性能优化
 // ========================================
+
+// 性能优化：缓存Canvas设置和网格
+let cachedCanvasSetup = null;
+let cachedGridData = null;
+
+/**
+ * 设置Canvas尺寸，支持设备像素比，确保在高DPI屏幕上清晰显示
+ * @param {HTMLCanvasElement} canvas - Canvas元素
+ * @returns {Object} 包含canvas上下文、尺寸和半径的对象
+ */
+function setupCanvas(canvas) {
+    const container = canvas.parentElement;
+    const containerWidth = container.clientWidth;
+
+    const displaySize = Math.min(containerWidth, 400);
+
+    // 性能优化：检查是否需要重新设置（避免不必要的重绘）
+    if (cachedCanvasSetup &&
+        cachedCanvasSetup.displaySize === displaySize &&
+        cachedCanvasSetup.dpr === (window.devicePixelRatio || 1)) {
+        return cachedCanvasSetup;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = displaySize * dpr;
+    canvas.height = displaySize * dpr;
+
+    canvas.style.width = `${displaySize}px`;
+    canvas.style.height = `${displaySize}px`;
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const centerX = displaySize / 2;
+    const centerY = displaySize / 2;
+    const padding = displaySize * 0.15;
+    const radius = (displaySize / 2) - padding;
+
+    cachedCanvasSetup = {
+        ctx,
+        canvas,
+        centerX,
+        centerY,
+        radius,
+        displaySize,
+        dpr
+    };
+
+    return cachedCanvasSetup;
+}
 
 function drawRadarChart() {
     const canvas = document.getElementById('radarChart');
-    const ctx = canvas.getContext('2d');
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = 100;
-    
-    // 清空画布
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 绘制背景网格
-    drawRadarGrid(ctx, centerX, centerY, radius);
-    
-    // 绘制数据区域
-    const data = [
-        results.openness,
-        results.conscientiousness,
-        results.extraversion,
-        results.agreeableness,
-        results.neuroticismReversed
-    ];
-    
-    drawRadarData(ctx, centerX, centerY, radius, data);
+    if (!canvas) return;
+
+    // 性能优化：使用 requestAnimationFrame 进行批量绘制
+    requestAnimationFrame(() => {
+        const { ctx, centerX, centerY, radius, canvas: cvs } = setupCanvas(canvas);
+
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+        drawRadarGrid(ctx, centerX, centerY, radius);
+
+        const data = [
+            results.openness,
+            results.conscientiousness,
+            results.extraversion,
+            results.agreeableness,
+            results.neuroticismReversed
+        ];
+
+        drawRadarData(ctx, centerX, centerY, radius, data);
+    });
 }
 
 function drawRadarGrid(ctx, centerX, centerY, radius) {
     const sides = 5;
     const angleStep = (Math.PI * 2) / sides;
-    
-    // 绘制同心圆
+
+    const gridLineWidth = Math.max(1, radius * 0.01);
+    const axisLineWidth = Math.max(1, radius * 0.015);
+
+    // 性能优化：批量绘制所有网格线（减少 draw calls）
+    ctx.beginPath();
+    ctx.strokeStyle = '#e8dcc4';
+    ctx.lineWidth = gridLineWidth;
+
     for (let i = 1; i <= 5; i++) {
-        ctx.beginPath();
-        ctx.strokeStyle = '#e8dcc4';
-        ctx.lineWidth = 1;
-        
         for (let j = 0; j <= sides; j++) {
             const angle = j * angleStep - Math.PI / 2;
             const r = (radius * i) / 5;
             const x = centerX + Math.cos(angle) * r;
             const y = centerY + Math.sin(angle) * r;
-            
+
             if (j === 0) {
                 ctx.moveTo(x, y);
             } else {
                 ctx.lineTo(x, y);
             }
         }
-        ctx.stroke();
     }
-    
-    // 绘制轴线
+    ctx.stroke();
+
+    // 性能优化：批量绘制所有轴线
+    ctx.beginPath();
+    ctx.strokeStyle = '#c4a574';
+    ctx.lineWidth = axisLineWidth;
+
     for (let i = 0; i < sides; i++) {
         const angle = i * angleStep - Math.PI / 2;
         const x = centerX + Math.cos(angle) * radius;
         const y = centerY + Math.sin(angle) * radius;
-        
-        ctx.beginPath();
-        ctx.strokeStyle = '#c4a574';
-        ctx.lineWidth = 1;
+
         ctx.moveTo(centerX, centerY);
         ctx.lineTo(x, y);
-        ctx.stroke();
     }
+    ctx.stroke();
 }
 
 function drawRadarData(ctx, centerX, centerY, radius, data) {
     const sides = 5;
     const angleStep = (Math.PI * 2) / sides;
-    
-    // 绘制数据多边形
+
+    const dataLineWidth = Math.max(2, radius * 0.03);
+    const pointRadius = Math.max(4, radius * 0.05);
+
+    // 性能优化：批量绘制数据区域和边框
     ctx.beginPath();
     ctx.fillStyle = 'rgba(45, 90, 135, 0.3)';
     ctx.strokeStyle = 'rgba(45, 90, 135, 0.8)';
-    ctx.lineWidth = 2;
-    
+    ctx.lineWidth = dataLineWidth;
+
     for (let i = 0; i < sides; i++) {
         const angle = i * angleStep - Math.PI / 2;
-        const value = data[i] / 10; // 归一化到 0-1
+        const value = data[i] / 10;
         const r = radius * value;
         const x = centerX + Math.cos(angle) * r;
         const y = centerY + Math.sin(angle) * r;
-        
+
         if (i === 0) {
             ctx.moveTo(x, y);
         } else {
@@ -828,18 +1021,18 @@ function drawRadarData(ctx, centerX, centerY, radius, data) {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    
-    // 绘制数据点
+
+    // 性能优化：批量绘制所有数据点
+    ctx.fillStyle = '#2d5a87';
     for (let i = 0; i < sides; i++) {
         const angle = i * angleStep - Math.PI / 2;
         const value = data[i] / 10;
         const r = radius * value;
         const x = centerX + Math.cos(angle) * r;
         const y = centerY + Math.sin(angle) * r;
-        
+
         ctx.beginPath();
-        ctx.fillStyle = '#2d5a87';
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -851,8 +1044,8 @@ function drawRadarData(ctx, centerX, centerY, radius, data) {
 function shareResult() {
     const animal = determineAnimal();
     const shareText = `我是${animal.name}！我的高原图腾是「${animal.tagline}」。来测试你的动物性格吧！`;
-    
-    // 检查是否支持原生分享
+    triggerHapticFeedback('success');
+
     if (navigator.share) {
         navigator.share({
             title: '三江源动物性格测试',
@@ -860,7 +1053,6 @@ function shareResult() {
             url: window.location.href
         }).catch(console.error);
     } else {
-        // 复制到剪贴板
         navigator.clipboard.writeText(shareText + ' ' + window.location.href)
             .then(() => {
                 alert('结果已复制到剪贴板！');
@@ -872,10 +1064,69 @@ function shareResult() {
 }
 
 // ========================================
-// 初始化
+// 初始化 - 性能优化
 // ========================================
 
+let resizeTimeout;
+
+function handleResize() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        const resultPage = document.getElementById('result');
+        if (resultPage && resultPage.classList.contains('active')) {
+            // 性能优化：清除缓存以重新计算尺寸
+            cachedCanvasSetup = null;
+            drawRadarChart();
+        }
+    }, 250);
+}
+
+// 性能优化：懒加载非关键内容
+function setupLazyLoading() {
+    // 标记首页为已加载
+    const homePage = document.getElementById('home');
+    if (homePage) {
+        homePage.setAttribute('data-loaded', 'true');
+    }
+
+    // 使用 Intersection Observer 懒加载其他页面
+    if ('IntersectionObserver' in window) {
+        const lazyObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const element = entry.target;
+                    element.setAttribute('data-loaded', 'true');
+                    lazyObserver.unobserve(element);
+                }
+            });
+        }, {
+            rootMargin: '50px'
+        });
+
+        // 观察所有标记为懒加载的页面
+        document.querySelectorAll('[data-lazy="true"]').forEach(element => {
+            lazyObserver.observe(element);
+        });
+    } else {
+        // 降级支持：所有页面立即加载
+        document.querySelectorAll('[data-lazy="true"]').forEach(element => {
+            element.setAttribute('data-loaded', 'true');
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 确保首页显示
     showPage('home');
+
+    // 性能优化：设置懒加载
+    setupLazyLoading();
+
+    // 性能优化：设置事件委托用于选项
+    setupOptionDelegation();
+
+    addTouchListeners('.btn-primary');
+    addTouchListeners('.btn-secondary');
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
 });

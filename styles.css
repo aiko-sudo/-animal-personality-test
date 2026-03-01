@@ -61,23 +61,56 @@
     --radius-xl: 32px;
 }
 
-/* 重置样式 */
+/* ========================================
+    触摸优化 & 性能优化
+    ======================================== */
+
+/* 全局触摸设置 - 移除默认点击高亮和优化触摸操作 */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+    /* 移除移动端默认的蓝色点击高亮效果 */
+    -webkit-tap-highlight-color: transparent;
+    /* 优化触摸操作：禁用双击缩放，保留平移 */
+    touch-action: manipulation;
+    /* 防止触摸时的延迟 */
+    -webkit-touch-callout: none;
+    /* 防止文本被选中（提升触摸体验） */
+    -webkit-user-select: none;
+    user-select: none;
+    /* 性能优化：GPU加速 */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* 允许文本区域和输入框选中文本 */
+input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 html {
     scroll-behavior: smooth;
+    /* 允许垂直滚动 */
+    touch-action: pan-y;
 }
 
 body {
+    /* 性能优化：优先使用系统字体，最快渲染速度，font-display: swap */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    background: linear-gradient(135deg, var(--bg-gradient%, var(--bg-gradient-end) 100%);
-    min-height: 100-start) 0vh;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    min-height: 100vh;
     color: var(--text-primary);
     line-height: 1.6;
+    /* 防止iOS橡皮筋效果 */
+    overscroll-behavior-y: none;
+    /* 性能优化：减少重绘范围 */
+    contain: layout style paint;
+    /* 隐藏滚动条（如需要） */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+    display: none;
 }
 
 /* 容器 */
@@ -88,21 +121,23 @@ body {
     position: relative;
 }
 
-/* 页面切换 */
+/* 页面切换 - 性能优化：使用GPU加速的transform属性 */
 .page {
     display: none;
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20px) translateZ(0);
     transition: opacity var(--transition-slow), transform var(--transition-slow);
     min-height: 100vh;
     padding: 20px;
+    will-change: opacity, transform;
+    contain: layout style paint;
 }
 
 .page.active {
     display: flex;
     flex-direction: column;
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) translateZ(0);
 }
 
 /* ========================================
@@ -114,7 +149,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    height: 100vh;
     text-align: center;
     padding: 40px 20px;
     position: relative;
@@ -133,6 +168,16 @@ body {
     z-index: -1;
 }
 
+.hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    max-width: 100%;
+    z-index: 1;
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -142,12 +187,20 @@ body {
 
 .logo-icon {
     font-size: 48px;
+    /* 性能优化：只在首页可见时运行动画，使用GPU加速 */
     animation: float 3s ease-in-out infinite;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* 首页不可见时暂停动画，节省CPU */
+#home:not(.active) .logo-icon {
+    animation-play-state: paused;
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { transform: translateY(0) translateZ(0); }
+    50% { transform: translateY(-10px) translateZ(0); }
 }
 
 .logo-text {
@@ -197,13 +250,21 @@ body {
     background: var(--bg-card);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    /* 性能优化：移除box-shadow过渡，改用GPU加速的transform */
+    transition: transform var(--transition-normal);
     min-width: 120px;
+    contain: layout style paint;
 }
 
 .feature:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px) translateZ(0);
+}
+
+/* 移动端优化：移除悬停效果以减少重绘 */
+@media (max-width: 768px) {
+    .feature:hover {
+        transform: none;
+    }
 }
 
 .feature-icon {
@@ -216,12 +277,14 @@ body {
     font-weight: 500;
 }
 
-/* 按钮样式 */
+/* 按钮样式 - 触摸优化 & 性能优化 */
 .btn-primary {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    padding: 18px 48px;
+    padding: 20px 52px;
+    min-height: 56px;
+    min-width: 120px;
     background: linear-gradient(135deg, var(--plateau-blue) 0%, var(--plateau-blue-dark) 100%);
     color: var(--text-light);
     border: none;
@@ -230,17 +293,36 @@ body {
     font-weight: 600;
     cursor: pointer;
     box-shadow: var(--shadow-lg);
-    transition: all var(--transition-normal);
+    /* 性能优化：只过渡transform和opacity（GPU加速），避免box-shadow重绘 */
+    transition: transform var(--transition-normal), opacity var(--transition-normal);
     text-decoration: none;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .btn-primary:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(-3px) translateZ(0);
 }
 
 .btn-primary:active {
-    transform: translateY(-1px);
+    transform: translateY(-1px) translateZ(0);
+}
+
+/* 移动端优化：移除悬停效果 */
+@media (hover: none) and (pointer: coarse) {
+    .btn-primary:hover {
+        transform: translateY(0) translateZ(0);
+    }
+}
+
+/* 触摸状态 - 提供即时视觉反馈 */
+.btn-primary.touching {
+    transform: scale(0.96);
+    opacity: 0.9;
 }
 
 .btn-arrow {
@@ -252,7 +334,9 @@ body {
 }
 
 .btn-secondary {
-    padding: 14px 32px;
+    padding: 16px 36px;
+    min-height: 52px;
+    min-width: 110px;
     background: var(--bg-card);
     color: var(--plateau-blue);
     border: 2px solid var(--plateau-blue-light);
@@ -260,7 +344,14 @@ body {
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
-    transition: all var(--transition-normal);
+    /* 性能优化：只过渡transform和background-color */
+    transition: transform var(--transition-normal), background-color var(--transition-fast), color var(--transition-fast);
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
+    transform: translateZ(0);
+    will-change: transform, background-color;
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -268,9 +359,34 @@ body {
     color: var(--text-light);
 }
 
+/* 移动端优化：移除悬停效果 */
+@media (hover: none) and (pointer: coarse) {
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--bg-card);
+        color: var(--plateau-blue);
+    }
+}
+
+.btn-secondary:active:not(:disabled) {
+    transform: scale(0.96) translateZ(0);
+}
+
+.btn-secondary.touching:not(:disabled) {
+    transform: scale(0.96);
+    opacity: 0.9;
+}
+
 .btn-secondary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+}
+
+/* 键盘焦点状态 - 无障碍支持 */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+    outline: 3px solid var(--plateau-sky);
+    outline-offset: 2px;
 }
 
 .disclaimer {
@@ -336,17 +452,20 @@ body {
     max-width: 600px;
     width: 100%;
     text-align: center;
+    /* 性能优化：使用GPU加速 */
     animation: cardAppear var(--transition-normal);
+    will-change: opacity, transform;
+    contain: layout style paint;
 }
 
 @keyframes cardAppear {
     from {
         opacity: 0;
-        transform: scale(0.95);
+        transform: scale(0.95) translateZ(0);
     }
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: scale(1) translateZ(0);
     }
 }
 
@@ -361,32 +480,62 @@ body {
 .options {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
 .option {
-    padding: 18px 24px;
+    padding: 20px 28px;
+    min-height: 56px;
     background: var(--bg-primary);
     border: 2px solid transparent;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-normal);
+    /* 性能优化：只过渡transform和background，避免border-color和box-shadow重绘 */
+    transition: transform var(--transition-normal), background-color var(--transition-fast);
     text-align: left;
     font-size: 16px;
     color: var(--text-primary);
     position: relative;
     overflow: hidden;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
+    will-change: transform, background-color;
+    transform: translateZ(0);
+    contain: layout style paint;
 }
 
 .option:hover {
-    border-color: var(--plateau-blue-light);
     background: var(--bg-card);
-    transform: translateX(5px);
+    transform: translateX(5px) translateZ(0);
+}
+
+/* 移动端优化：移除悬停效果 */
+@media (hover: none) and (pointer: coarse) {
+    .option:hover {
+        background: var(--bg-primary);
+        transform: translateX(0) translateZ(0);
+    }
+}
+
+.option:active {
+    transform: scale(0.98) translateZ(0);
+}
+
+.option.touching {
+    transform: scale(0.98) translateZ(0);
+    background: rgba(45, 90, 135, 0.08);
 }
 
 .option.selected {
     border-color: var(--plateau-blue);
     background: rgba(45, 90, 135, 0.1);
+    transform: translateX(8px) translateZ(0);
+}
+
+.option.selected.touching {
+    transform: translateX(8px) scale(0.98) translateZ(0);
 }
 
 .option::before {
@@ -399,6 +548,12 @@ body {
     background: var(--plateau-blue);
     transform: scaleY(0);
     transition: transform var(--transition-fast);
+    will-change: transform;
+}
+
+.option:focus-visible {
+    outline: 3px solid var(--plateau-sky);
+    outline-offset: 2px;
 }
 
 .option.selected::before {
@@ -466,17 +621,20 @@ body {
     font-size: 80px;
     background: var(--bg-primary);
     box-shadow: var(--shadow-md);
+    /* 性能优化：使用GPU加速 */
     animation: avatarAppear var(--transition-slow);
+    will-change: opacity, transform;
+    contain: layout style paint;
 }
 
 @keyframes avatarAppear {
     from {
         opacity: 0;
-        transform: scale(0.5) rotate(-10deg);
+        transform: scale(0.5) rotate(-10deg) translateZ(0);
     }
     to {
         opacity: 1;
-        transform: scale(1) rotate(0);
+        transform: scale(1) rotate(0) translateZ(0);
     }
 }
 
@@ -527,22 +685,26 @@ body {
     font-size: 14px;
     color: var(--plateau-blue);
     font-weight: 500;
-    animation: tagAppear var(--transition-normal) backwards;
+    /* 性能优化：使用GPU加速，减少动画延迟 */
+    animation: tagAppear 0.3s ease-out backwards;
+    will-change: opacity, transform;
+    transform: translateZ(0);
 }
 
-.trait-tag:nth-child(1) { animation-delay: 0.1s; }
-.trait-tag:nth-child(2) { animation-delay: 0.2s; }
-.trait-tag:nth-child(3) { animation-delay: 0.3s; }
-.trait-tag:nth-child(4) { animation-delay: 0.4s; }
+/* 性能优化：减少动画延迟，加快渲染 */
+.trait-tag:nth-child(1) { animation-delay: 0.05s; }
+.trait-tag:nth-child(2) { animation-delay: 0.1s; }
+.trait-tag:nth-child(3) { animation-delay: 0.15s; }
+.trait-tag:nth-child(4) { animation-delay: 0.2s; }
 
 @keyframes tagAppear {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(10px) translateZ(0);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
     }
 }
 
@@ -550,11 +712,16 @@ body {
 .radar-chart-container {
     position: relative;
     padding: 20px 0;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
 }
 
 #radarChart {
-    max-width: 100%;
+    width: 100%;
     height: auto;
+    aspect-ratio: 1 / 1;
+    display: block;
 }
 
 .radar-labels {
@@ -619,63 +786,71 @@ body {
     .hero h1 {
         font-size: 32px;
     }
-    
+
     .tagline {
         font-size: 18px;
     }
-    
+
     .features {
         gap: 16px;
     }
-    
+
     .feature {
         min-width: 100px;
         padding: 16px;
     }
-    
+
     .btn-primary {
-        padding: 16px 36px;
+        padding: 18px 40px;
         font-size: 16px;
+        min-height: 52px;
     }
-    
+
     .question-card {
         padding: 32px 24px;
     }
-    
+
     .question-text {
         font-size: 18px;
     }
-    
+
     .option {
-        padding: 14px 18px;
+        padding: 18px 24px;
         font-size: 15px;
+        min-height: 52px;
     }
-    
+
     .result-card {
         padding: 32px 24px;
     }
-    
+
     .animal-avatar {
         width: 120px;
         height: 120px;
         font-size: 60px;
     }
-    
+
     .animal-name {
         font-size: 28px;
     }
-    
+
     .navigation {
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
     }
-    
+
     .action-buttons {
         flex-direction: column;
     }
-    
+
     .btn-secondary {
         width: 100%;
+        min-height: 52px;
+        padding: 16px 32px;
+    }
+
+    .radar-chart-container {
+        max-width: 320px;
     }
 }
 
@@ -683,29 +858,260 @@ body {
     .container {
         padding: 10px;
     }
-    
+
     .hero {
-        padding: 20px 10px;
+        padding: 15px 8px;
+        height: 100vh;
+        overflow: hidden;
     }
-    
+
+    .logo {
+        margin-bottom: 20px;
+    }
+
+    .logo-icon {
+        font-size: 40px;
+    }
+
+    .logo-text {
+        font-size: 24px;
+    }
+    }
+
+    .logo {
+        margin-bottom: 20px;
+    }
+
+    .logo-icon {
+        font-size: 40px;
+    }
+
+    .logo-text {
+        font-size: 24px;
+    }
+
+    .hero-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        max-width: 100%;
+    }
+
     .hero h1 {
         font-size: 28px;
+        margin-bottom: 12px;
     }
-    
+
+    .tagline {
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    .description {
+        font-size: 14px;
+        margin-bottom: 24px;
+        line-height: 1.6;
+    }
+
+    .features {
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .feature {
+        padding: 12px 16px;
+        min-width: 80px;
+    }
+
+    .feature-icon {
+        font-size: 24px;
+    }
+
+    .feature span:last-child {
+        font-size: 12px;
+    }
+
+    .btn-primary {
+        margin-bottom: 16px;
+    }
+
+    .disclaimer {
+        font-size: 12px;
+        margin-top: auto;
+    }
+    }
+}
+        overflow: hidden;
+    }
+
+
+/* ========================================
+   动物主题色
+   ======================================== */
+
+.animal-wolf {
+    background: linear-gradient(135deg, rgba(90, 106, 122, 0.2) 0%, rgba(45, 90, 135, 0.2) 100%);
+}
+
+.animal-gull {
+    background: linear-gradient(135deg, rgba(139, 105, 20, 0.2) 0%, rgba(212, 168, 75, 0.2) 100%);
+}
+
+.animal-yak {
+    background: linear-gradient(135deg, rgba(74, 55, 40, 0.2) 0%, rgba(139, 115, 85, 0.2) 100%);
+}
+
+.animal-vulture {
+    background: linear-gradient(135deg, rgba(61, 61, 61, 0.2) 0%, rgba(90, 90, 90, 0.2) 100%);
+}
+
+.animal-fox {
+    background: linear-gradient(135deg, rgba(196, 92, 38, 0.2) 0%, rgba(212, 168, 75, 0.2) 100%);
+}
+
+/* ========================================
+   动画效果
+   ======================================== */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.slide-up {
+    animation: slideUp var(--transition-normal);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+    .logo {
+        margin-bottom: 20px;
+    }
+
+    .logo-icon {
+        font-size: 40px;
+    }
+
+    .logo-text {
+        font-size: 24px;
+    }
+
+    .hero h1 {
+        font-size: 28px;
+        margin-bottom: 12px;
+    }
+
+    .tagline {
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    .description {
+        font-size: 14px;
+        margin-bottom: 24px;
+        line-height: 1.6;
+    }
+
+
+    .hero h1 {
+        font-size: 28px;
+        margin-bottom: 12px;
+    }
+
+    .tagline {
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    .description {
+        font-size: 14px;
+        margin-bottom: 24px;
+        line-height: 1.6;
+    }
+
+    .features {
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .feature {
+        padding: 12px 16px;
+        min-width: 80px;
+    }
+
+    .feature-icon {
+        font-size: 24px;
+    }
+
+    .feature span:last-child {
+        font-size: 12px;
+    }
+
+    .btn-primary {
+        margin-bottom: 16px;
+    }
+
+    .disclaimer {
+        font-size: 12px;
+        margin-top: auto;
+    }
+    }
+
+    .hero-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        max-width: 100%;
+    }
+
+
     .features {
         flex-direction: column;
     }
-    
+
     .question-card {
         padding: 24px 16px;
     }
-    
+
     .question-text {
         font-size: 16px;
     }
-    
+
+    .option {
+        padding: 18px 20px;
+        font-size: 15px;
+        min-height: 52px;
+    }
+
     .result-card {
         padding: 24px 16px;
+    }
+
+    .btn-primary {
+        padding: 16px 32px;
+        min-height: 52px;
+    }
+
+    .btn-secondary {
+        min-height: 52px;
+        padding: 16px 24px;
+    }
+
+    .radar-chart-container {
+        max-width: 280px;
     }
 }
 

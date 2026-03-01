@@ -425,7 +425,7 @@ const questions = [
         text: '我有时会感到孤独或失落',
         options: [
             { text: '完全不符合', score: 5 },
-            { text: '不太符合', score: 4 }
+            { text: '不太符合', score: 4 },
             { text: '一般', score: 3 },
             { text: '比较符合', score: 2 },
             { text: '完全符合', score: 1 }

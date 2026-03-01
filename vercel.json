@@ -1,7 +1,16 @@
 {
   "buildCommand": null,
   "outputDirectory": ".",
-  "framework": "static",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+  "buildCommand": null,
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/(.*)",
